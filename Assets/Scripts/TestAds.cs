@@ -1,98 +1,143 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.Advertisements;
-using UnityEngine.UI;
 
-// Classe responsável por gerenciar anúncios da Unity Ads
-public class TestAds : MonoBehaviour, IUnityAdsInitializationListener, IUnityAdsLoadListener, IUnityAdsShowListener
+public class TestAds : MonoBehaviour
 {
-    [SerializeField] private string androidGameId; // ID do jogo no Android
-    [SerializeField] private string iosGameId; // ID do jogo no iOS
-    [SerializeField] private string adUnitIdAndroid = "Interstitial_Android"; // Nome do Ad Unit para Android
-    [SerializeField] private string adUnitIdIOS = "Interstitial_iOS"; // Nome do Ad Unit para iOS
-    [SerializeField] private Button adButton; // Referência ao botão que ativa o anúncio
+    [SerializeField] private string androidGameId = "5818303";
+    [SerializeField] private string iosGameId = "5818302";
+    [SerializeField] private string interstitialIdAndroid = "Interstitial_Android";
+    [SerializeField] private string rewardIdAndroid = "Rewarded_Android";
+    [SerializeField] private string interstitialIdIOS = "Interstitial_iOS";
+    [SerializeField] private string rewardIdIos = "Rewarded_iOS";
+    [SerializeField] private bool testMode = true;
 
-    private string gameId; // ID do jogo que será definido conforme a plataforma
-    private string adUnitId; // ID do anúncio que será carregado
-    private bool isAdReady = false; // Flag que indica se o anúncio está pronto para exibição
+    private string gameId;
+    private string interstitialAdUnitId;
+    private string rewardedAdUnitId;
 
-    private void Awake()
+    private bool isInterstitialReady = false;
+    private bool isRewardedReady = false;
+
+    void Start()
     {
-        // Define o Game ID e o Ad Unit ID de acordo com a plataforma em que o jogo está rodando
+        // Define os IDs de acordo com a plataforma
         gameId = (Application.platform == RuntimePlatform.IPhonePlayer) ? iosGameId : androidGameId;
-        adUnitId = (Application.platform == RuntimePlatform.IPhonePlayer) ? adUnitIdIOS : adUnitIdAndroid;
+        interstitialAdUnitId = (Application.platform == RuntimePlatform.IPhonePlayer) ? interstitialIdIOS : interstitialIdAndroid;
+        rewardedAdUnitId = (Application.platform == RuntimePlatform.IPhonePlayer) ? rewardIdIos : rewardIdAndroid;
 
-        // Inicializa a Unity Ads
-        Advertisement.Initialize(gameId, true, this);
+        // Inicializa Unity Ads
+        Advertisement.Initialize(gameId, testMode, new InitializationListener(this));
     }
 
-    // Callback chamado quando a inicialização da Unity Ads é concluída com sucesso
-    public void OnInitializationComplete()
+    public void ShowInterstitial()
     {
-        Debug.Log("Unity Ads inicializado com sucesso.");
-        Advertisement.Load(adUnitId, this); // Carrega o anúncio após a inicialização
-    }
-
-    // Callback chamado quando a inicialização da Unity Ads falha
-    public void OnInitializationFailed(UnityAdsInitializationError error, string message)
-    {
-        Debug.LogError($"Falha na inicialização dos Ads: {error} - {message}");
-    }
-
-    // Callback chamado quando um anúncio é carregado com sucesso
-    public void OnUnityAdsAdLoaded(string placementId)
-    {
-        if (placementId == adUnitId)
+        if (isInterstitialReady)
         {
-            Debug.Log("Anúncio carregado com sucesso.");
-            isAdReady = true; // Define que o anúncio está pronto para ser exibido
-            adButton.interactable = true; // Habilita o botão de anúncio
-        }
-    }
-
-    // Callback chamado quando um anúncio falha ao carregar
-    public void OnUnityAdsFailedToLoad(string placementId, UnityAdsLoadError error, string message)
-    {
-        Debug.LogError($"Erro ao carregar anúncio {placementId}: {error} - {message}");
-    }
-
-    // Método para exibir o anúncio
-    public void ShowAd()
-    {
-        if (isAdReady) // Verifica se o anúncio está pronto
-        {
-            Advertisement.Show(adUnitId, this); // Exibe o anúncio
+            Advertisement.Show(interstitialAdUnitId, new AdsShowListener(this, false));
+            isInterstitialReady = false;  // Reseta o status atÃ© carregar novamente
         }
         else
         {
-            Debug.LogWarning("Anúncio ainda não está pronto.");
+            Debug.Log("AnÃºncio intersticial ainda nÃ£o carregou.");
         }
     }
 
-    // Callback chamado quando o anúncio é concluído
-    public void OnUnityAdsShowComplete(string placementId, UnityAdsShowCompletionState showCompletionState)
+    public void ShowRewarded()
     {
-        if (placementId == adUnitId && showCompletionState == UnityAdsShowCompletionState.COMPLETED)
+        if (isRewardedReady)
         {
-            Debug.Log("Anúncio concluído! Pode recompensar o jogador.");
-            Advertisement.Load(adUnitId, this); // Recarrega o anúncio para futuras exibições
+            Advertisement.Show(rewardedAdUnitId, new AdsShowListener(this, true));
+            isRewardedReady = false;  // Reseta o status atÃ© carregar novamente
+        }
+        else
+        {
+            Debug.Log("AnÃºncio recompensado ainda nÃ£o carregou.");
         }
     }
 
-    // Callback chamado quando ocorre um erro na exibição do anúncio
-    public void OnUnityAdsShowFailure(string placementId, UnityAdsShowError error, string message)
+    private class InitializationListener : IUnityAdsInitializationListener
     {
-        Debug.LogError($"Erro ao exibir anúncio {placementId}: {error} - {message}");
+        private TestAds adsScript;
+        public InitializationListener(TestAds script) { adsScript = script; }
+
+        public void OnInitializationComplete()
+        {
+            Debug.Log("Unity Ads inicializado com sucesso!");
+
+            // ApÃ³s a inicializaÃ§Ã£o, carrega os anÃºncios
+            Advertisement.Load(adsScript.interstitialAdUnitId, new AdsLoadListener(adsScript, false));
+            Advertisement.Load(adsScript.rewardedAdUnitId, new AdsLoadListener(adsScript, true));
+        }
+
+        public void OnInitializationFailed(UnityAdsInitializationError error, string message)
+        {
+            Debug.LogError($"Falha na inicializaÃ§Ã£o do Unity Ads: {error} - {message}");
+        }
     }
 
-    // Callback chamado quando o anúncio começa a ser exibido
-    public void OnUnityAdsShowStart(string placementId)
+    private class AdsLoadListener : IUnityAdsLoadListener
     {
-        Debug.Log("Anúncio começou.");
+        private TestAds adsScript;
+        private bool isRewarded;
+
+        public AdsLoadListener(TestAds script, bool rewarded)
+        {
+            adsScript = script;
+            isRewarded = rewarded;
+        }
+
+        public void OnUnityAdsAdLoaded(string placementId)
+        {
+            if (isRewarded)
+            {
+                adsScript.isRewardedReady = true;
+                Debug.Log("AnÃºncio recompensado carregado!");
+            }
+            else
+            {
+                adsScript.isInterstitialReady = true;
+                Debug.Log("AnÃºncio intersticial carregado!");
+            }
+        }
+
+        public void OnUnityAdsFailedToLoad(string placementId, UnityAdsLoadError error, string message)
+        {
+            Debug.LogError($"Erro ao carregar anÃºncio {placementId}: {error} - {message}");
+        }
     }
 
-    // Callback chamado quando o jogador clica no anúncio
-    public void OnUnityAdsShowClick(string placementId)
+    private class AdsShowListener : IUnityAdsShowListener
     {
-        Debug.Log("Anúncio foi clicado.");
+        private TestAds adsScript;
+        private bool isRewarded;
+
+        public AdsShowListener(TestAds script, bool rewarded)
+        {
+            adsScript = script;
+            isRewarded = rewarded;
+        }
+
+        public void OnUnityAdsShowComplete(string placementId, UnityAdsShowCompletionState showCompletionState)
+        {
+            if (showCompletionState == UnityAdsShowCompletionState.COMPLETED)
+            {
+                Debug.Log($"O usuÃ¡rio assistiu ao anÃºncio {placementId} atÃ© o final.");
+                if (isRewarded)
+                {
+                    Debug.Log("O jogador ganhou a recompensa!");
+                }
+            }
+
+            // ApÃ³s exibir o anÃºncio, recarregamos ele
+            Advertisement.Load(placementId, new AdsLoadListener(adsScript, isRewarded));
+        }
+
+        public void OnUnityAdsShowFailure(string placementId, UnityAdsShowError error, string message)
+        {
+            Debug.LogError($"Erro ao exibir anÃºncio {placementId}: {error} - {message}");
+        }
+
+        public void OnUnityAdsShowStart(string placementId) { }
+        public void OnUnityAdsShowClick(string placementId) { }
     }
 }
