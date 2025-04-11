@@ -8,25 +8,31 @@ public class TestAds : MonoBehaviour,
     IUnityAdsShowListener,            // Interface para lidar com eventos de exibição de anúncios
     IUnityAdsInitializationListener   // Interface para lidar com eventos de inicialização dos anúncios
 {
+    //Anúncios
+
     // IDs de anúncios para a plataforma Android
     [Header("---------- ANDROID IDs")]
     public string ANDROID_GAME_ID;
     public string ANDROID_INTERSTITIAL_ID = "Interstitial_Android";
     public string ANDROID_REWARDED_ID = "Rewarded_Android";
+    public string ANDROID_BANNER_ID = "Banner_Android";
 
     // IDs de anúncios para a plataforma iOS
     [Header("---------- iOS IDs")]
     public string iOS_GAME_ID;
     public string iOS_INTERSTITIAL_ID = "Interstitial_iOS";
     public string iOS_REWARDED_ID = "Rewarded_iOS";
+    public string iOS_BANNER_ID = "Banner_iOS";
 
     // Variáveis que armazenarão os IDs corretos em tempo de execução
     private string GAME_ID;
     private string INTERSTITIAL_ID;
     private string REWARDED_ID;
+    private string BANNER_ID;
 
     // Evento que será chamado quando um anúncio recompensado for completado com sucesso
     public event Action OnRewardedCompleted;
+
 
     // Método público que exibe um anúncio intersticial (anúncio simples, sem recompensa)
     public void ShowInterstitial()
@@ -49,10 +55,12 @@ public class TestAds : MonoBehaviour,
         GAME_ID = ANDROID_GAME_ID;
         INTERSTITIAL_ID = ANDROID_INTERSTITIAL_ID;
         REWARDED_ID = ANDROID_REWARDED_ID;
+        BANNER_ID = ANDROID_BANNER_ID;
 #else
         GAME_ID = iOS_GAME_ID;
         INTERSTITIAL_ID = iOS_INTERSTITIAL_ID;
         REWARDED_ID = iOS_REWARDED_ID;
+        BANNER_ID = iOS_BANNER_ID;
 #endif
     }
 
@@ -65,6 +73,7 @@ public class TestAds : MonoBehaviour,
         // Se ainda não estiver inicializado e for suportado, inicia os anúncios
         if (!Advertisement.isInitialized && Advertisement.isSupported)
         {
+            Advertisement.Banner.SetPosition(BannerPosition.TOP_CENTER);
             Advertisement.Initialize(GAME_ID, true, this);
         }
     }
@@ -77,6 +86,14 @@ public class TestAds : MonoBehaviour,
         // Carrega os anúncios intersticial e recompensado para deixá-los prontos
         Advertisement.Load(INTERSTITIAL_ID, this);
         Advertisement.Load(REWARDED_ID, this);
+
+        BannerLoadOptions options = new BannerLoadOptions
+        {
+            loadCallback = OnBannerLoaded,
+            errorCallback = OnBannerError
+        };
+
+        Advertisement.Banner.Load(BANNER_ID, options);
     }
 
     // Chamado caso a inicialização falhe
@@ -100,7 +117,7 @@ public class TestAds : MonoBehaviour,
     // Chamado quando o jogador clica no anúncio (opcional de usar)
     public void OnUnityAdsShowClick(string placementId)
     {
-        // Sem ação no clique por enquanto
+        
     }
 
     // Chamado quando um anúncio termina de ser exibido
@@ -129,6 +146,29 @@ public class TestAds : MonoBehaviour,
     // Chamado quando um anúncio começa a ser exibido (opcional de usar)
     public void OnUnityAdsShowStart(string placementId)
     {
-        // Sem ação no início por enquanto
+        
+    }
+
+    //-----------------------------------------------------------------------------------------------
+    //Banners
+
+    public void ShowBanner()
+    {
+        Advertisement.Banner.Show(BANNER_ID, null);
+    }
+
+    public void HideBanner()
+    {
+        Advertisement.Banner.Hide();
+    }
+
+    public void OnBannerLoaded()
+    {
+        ShowBanner();
+    }
+
+    public void OnBannerError(string message)
+    {
+        Debug.Log($"Banner Error: {message}");
     }
 }

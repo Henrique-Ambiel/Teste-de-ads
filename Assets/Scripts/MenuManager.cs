@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,7 +9,7 @@ public class MenuManager : MonoBehaviour
     public TestAds adsManager;
 
     // Referência ao texto da UI que exibe a quantidade de moedas
-    public Text uiCoinsText;
+    public TextMeshProUGUI uiCoinsText;
 
     // Método chamado automaticamente quando o objeto é iniciado na cena
     private void Start()
