@@ -152,23 +152,32 @@ public class TestAds : MonoBehaviour,
     //-----------------------------------------------------------------------------------------------
     //Banners
 
+    // Método responsável por exibir o banner de anúncio na tela
     public void ShowBanner()
     {
+        // Mostra o banner utilizando o ID definido (BANNER_ID)
         Advertisement.Banner.Show(BANNER_ID, null);
     }
 
+    // Método responsável por ocultar o banner de anúncio da tela
     public void HideBanner()
     {
+        // Esconde o banner que estiver sendo exibido
         Advertisement.Banner.Hide();
     }
 
+    // Método chamado automaticamente quando o banner é carregado com sucesso
     public void OnBannerLoaded()
     {
+        // Exibe o banner assim que ele for carregado
         ShowBanner();
     }
 
+    // Método chamado automaticamente caso ocorra um erro ao carregar o banner
     public void OnBannerError(string message)
     {
+        // Exibe no console o erro ocorrido durante o carregamento do banner
         Debug.Log($"Banner Error: {message}");
     }
+
 }
