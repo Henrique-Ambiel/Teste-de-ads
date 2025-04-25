@@ -4,51 +4,82 @@ using System;
 
 // Classe responsável por gerenciar os anúncios Unity Ads no jogo
 public class TestAds : MonoBehaviour,
-    IUnityAdsLoadListener,            // Interface para lidar com eventos de carregamento de anúncios
-    IUnityAdsShowListener,            // Interface para lidar com eventos de exibição de anúncios
-    IUnityAdsInitializationListener   // Interface para lidar com eventos de inicialização dos anúncios
+    IUnityAdsLoadListener,
+    IUnityAdsShowListener,
+    IUnityAdsInitializationListener
 {
-    //Anúncios
-
-    // IDs de anúncios para a plataforma Android
     [Header("---------- ANDROID IDs")]
     public string ANDROID_GAME_ID;
     public string ANDROID_INTERSTITIAL_ID = "Interstitial_Android";
     public string ANDROID_REWARDED_ID = "Rewarded_Android";
     public string ANDROID_BANNER_ID = "Banner_Android";
 
-    // IDs de anúncios para a plataforma iOS
     [Header("---------- iOS IDs")]
     public string iOS_GAME_ID;
     public string iOS_INTERSTITIAL_ID = "Interstitial_iOS";
     public string iOS_REWARDED_ID = "Rewarded_iOS";
     public string iOS_BANNER_ID = "Banner_iOS";
 
-    // Variáveis que armazenarão os IDs corretos em tempo de execução
     private string GAME_ID;
     private string INTERSTITIAL_ID;
     private string REWARDED_ID;
     private string BANNER_ID;
 
-    // Evento que será chamado quando um anúncio recompensado for completado com sucesso
     public event Action OnRewardedCompleted;
 
+    [Header("---------- ADS STATS")]
+    public bool interstitialLoaded = false;
+    public bool rewardedLoaded = false;
+    public bool bannerLoaded = false;
 
-    // Método público que exibe um anúncio intersticial (anúncio simples, sem recompensa)
+    [Header("---------- COMPONENTS")]
+    //para o caso de n�o ter Ads disponivel
+    //pode ser que naquele pa�s n�o tenha nenhum
+    //ou que o player est� offline sem internet
+    public GameObject backfill;
+    public GameObject closeButton;
+    public void ShowBanner()
+    {
+        Advertisement.Banner.Show(BANNER_ID, null);
+    }
+    public void HideBanner()
+    {
+        Advertisement.Banner.Hide();
+    }
     public void ShowInterstitial()
     {
-        // Mostra o anúncio intersticial usando o ID definido
-        Advertisement.Show(INTERSTITIAL_ID, this);
+        if (interstitialLoaded)
+        {
+            //esse evento deve ser chamado para mostrar um interstitial na tela
+            Advertisement.Show(INTERSTITIAL_ID, this);
+        }
+        else
+        {
+            backfill.SetActive(true);
+            closeButton.SetActive(false);
+            Invoke(nameof(ShowCloseButton), 2);
+        }
     }
-
-    // Método público que exibe um anúncio recompensado (dá algo ao jogador após assistir)
     public void ShowRewarded()
     {
-        // Mostra o anúncio recompensado usando o ID definido
-        Advertisement.Show(REWARDED_ID, this);
+        if (rewardedLoaded)
+        {
+            //esse evento deve ser chamado para mostrar um rewarded na tela
+            Advertisement.Show(REWARDED_ID, this);
+        }
+        else
+        {
+            backfill.SetActive(true);
+            closeButton.SetActive(false);
+            if (OnRewardedCompleted != null) OnRewardedCompleted();
+            Invoke(nameof(ShowCloseButton), 15);
+        }
     }
 
-    // Define os IDs corretos com base na plataforma (Android ou iOS)
+    void ShowCloseButton()
+    {
+        closeButton.SetActive(true);
+    }
     void Awake()
     {
 #if UNITY_ANDROID
@@ -63,27 +94,23 @@ public class TestAds : MonoBehaviour,
         BANNER_ID = iOS_BANNER_ID;
 #endif
     }
-
-    // Inicializa o sistema de anúncios Unity
     void Start()
     {
-        // Mantém esse objeto entre as cenas
         DontDestroyOnLoad(this);
-
-        // Se ainda não estiver inicializado e for suportado, inicia os anúncios
         if (!Advertisement.isInitialized && Advertisement.isSupported)
         {
             Advertisement.Banner.SetPosition(BannerPosition.TOP_CENTER);
-            Advertisement.Initialize(GAME_ID, true, this);
+            Advertisement.Initialize(GAME_ID, Debug.isDebugBuild, this);
         }
     }
-
-    // Chamado quando a inicialização dos anúncios é concluída com sucesso
     public void OnInitializationComplete()
     {
+        //assim que completa o start dos Ads vamos carregar um
+        //pra deixar prontinho pra ser mostrado
         Debug.Log("OnInitializationComplete");
-
-        // Carrega os anúncios intersticial e recompensado para deixá-los prontos
+        interstitialLoaded = false;
+        rewardedLoaded = false;
+        bannerLoaded = false;
         Advertisement.Load(INTERSTITIAL_ID, this);
         Advertisement.Load(REWARDED_ID, this);
 
@@ -95,89 +122,60 @@ public class TestAds : MonoBehaviour,
 
         Advertisement.Banner.Load(BANNER_ID, options);
     }
-
-    // Chamado caso a inicialização falhe
+    void OnBannerLoaded()
+    {
+        //toda vez que um banner for carregado
+        //mostra automaticamente na tela
+        //comente essa linha abaixo caso voce
+        //queira controlar os banner manualmente
+        Debug.Log("OnBannerLoaded: " + BANNER_ID);
+        bannerLoaded = true;
+        ShowBanner();
+    }
+    void OnBannerError(string message)
+    {
+        Debug.Log($"Banner Error: {message}");
+    }
     public void OnInitializationFailed(UnityAdsInitializationError error, string message)
     {
         Debug.Log($"Unity Ads Initialization Failed: {error.ToString()} - {message}");
     }
-
-    // Chamado quando um anúncio é carregado com sucesso
     public void OnUnityAdsAdLoaded(string placementId)
     {
+        if (placementId == INTERSTITIAL_ID) interstitialLoaded = true;
+        if (placementId == REWARDED_ID) rewardedLoaded = true;
         Debug.Log("OnUnityAdsAdLoaded: " + placementId);
     }
-
-    // Chamado quando falha ao carregar um anúncio
     public void OnUnityAdsFailedToLoad(string placementId, UnityAdsLoadError error, string message)
     {
         Debug.Log($"Error loading Ad Unit: {placementId} - {error.ToString()} - {message}");
     }
-
-    // Chamado quando o jogador clica no anúncio (opcional de usar)
     public void OnUnityAdsShowClick(string placementId)
     {
-        
-    }
 
-    // Chamado quando um anúncio termina de ser exibido
+    }
     public void OnUnityAdsShowComplete(string placementId, UnityAdsShowCompletionState showCompletionState)
     {
         Debug.Log($"OnUnityAdsShowComplete {placementId}:{showCompletionState}");
+        if (placementId == INTERSTITIAL_ID) interstitialLoaded = false;
+        if (placementId == REWARDED_ID) rewardedLoaded = false;
 
-        // Recarrega o anúncio após ser exibido, mantendo ele disponível para a próxima vez
         Advertisement.Load(placementId, this);
 
-        // Se for um anúncio recompensado, exibido completamente, aciona a recompensa
         if (placementId == REWARDED_ID &&
             showCompletionState == UnityAdsShowCompletionState.COMPLETED &&
-            OnRewardedCompleted != null)
+            OnRewardedCompleted != null
+            )
         {
             OnRewardedCompleted();
         }
     }
-
-    // Chamado quando falha ao exibir um anúncio
     public void OnUnityAdsShowFailure(string placementId, UnityAdsShowError error, string message)
     {
         Debug.Log($"Error showing Ad Unit {placementId}: {error.ToString()} - {message}");
     }
-
-    // Chamado quando um anúncio começa a ser exibido (opcional de usar)
     public void OnUnityAdsShowStart(string placementId)
     {
-        
     }
-
-    //-----------------------------------------------------------------------------------------------
-    //Banners
-
-    // Método responsável por exibir o banner de anúncio na tela
-    public void ShowBanner()
-    {
-        // Mostra o banner utilizando o ID definido (BANNER_ID)
-        Advertisement.Banner.Show(BANNER_ID, null);
-    }
-
-    // Método responsável por ocultar o banner de anúncio da tela
-    public void HideBanner()
-    {
-        // Esconde o banner que estiver sendo exibido
-        Advertisement.Banner.Hide();
-    }
-
-    // Método chamado automaticamente quando o banner é carregado com sucesso
-    public void OnBannerLoaded()
-    {
-        // Exibe o banner assim que ele for carregado
-        ShowBanner();
-    }
-
-    // Método chamado automaticamente caso ocorra um erro ao carregar o banner
-    public void OnBannerError(string message)
-    {
-        // Exibe no console o erro ocorrido durante o carregamento do banner
-        Debug.Log($"Banner Error: {message}");
-    }
-
 }
+
